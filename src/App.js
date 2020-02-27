@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useReducer } from "react";
 
+import isFunction from "lodash/isFunction";
+
 import CharacterList from "./CharacterList";
 
 import dummyData from "./dummy-data";
@@ -16,16 +18,20 @@ const initialState = {
   error: null
 };
 
+const LOADING = "LOADING";
+const RESPONSE_COMPLETE = "RESPONSE_COMPLETE";
+const ERROR = "ERROR";
+
 const fetchReducer = (state, action) => {
-  if (action.type === "LOADING") {
+  if (action.type === LOADING) {
     return {
-      result: null,
+      result: [],
       loading: true,
       error: null
     };
   }
 
-  if (action.type === "RESPONSE_COMPLETE") {
+  if (action.type === RESPONSE_COMPLETE) {
     return {
       result: action.payload.response,
       loading: false,
@@ -33,7 +39,7 @@ const fetchReducer = (state, action) => {
     };
   }
 
-  if (action.type === "ERROR") {
+  if (action.type === ERROR) {
     return {
       result: null,
       loading: false,
@@ -48,15 +54,15 @@ const useFetch = url => {
   const [state, dispatch] = useReducer(fetchReducer, initialState);
 
   useEffect(() => {
-    dispatch({ type: "LOADING" });
+    dispatch({ type: LOADING });
 
     const fetchUrl = async () => {
       try {
         const response = await fetch(url);
         const data = await response.json();
-        dispatch({ type: "RESPONSE_COMPLETE", payload: { response: data } });
+        dispatch({ type: RESPONSE_COMPLETE, payload: { response: data } });
       } catch (error) {
-        dispatch({ type: "ERROR", payload: { error } });
+        dispatch({ type: ERROR, payload: { error } });
       }
     };
 
@@ -75,6 +81,24 @@ const useFetch = url => {
   }, [url]);
 
   return [state.result, state.loading, state.error];
+};
+
+const useThunkReducer = (reducer, initialState) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const enhancedDispatch = action => {
+    console.log(action);
+
+    if (isFunction(action)) {
+      action(dispatch);
+    } else {
+      dispatch(action);
+    }
+
+    dispatch(action);
+  };
+
+  return [state, enhancedDispatch];
 };
 
 export default function App() {
